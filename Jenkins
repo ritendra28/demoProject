@@ -1,28 +1,29 @@
 pipeline {
   agent any
+  environment {
+    //adding a comment for the commit test
+    DEPLOY_CREDS = credentials('ANYPOINT')
+    MULE_VERSION = '4.3.0'
+    BG = "APISERO"
+    WORKER = "Micro"
+  }
   stages {
-    stage('Build Application') { 
+    stage('Build') {
       steps {
-        bat 'mvn clean install'
+            bat 'mvn -B -U -e -V clean -DskipTests package'
       }
     }
- 	stage('Test') { 
+     stage('Deploy Development') {
+      environment {
+        ENVIRONMENT = 'Sandbox'
+        APP_NAME = 'test-app-ritendra'
+      }
       steps {
-        echo 'Test Appplication...' 
-        bat 'mvn test'
+            bat 'mvn -U -V -e -B -DskipTests deploy -DmuleDeploy -Dmule.version="%MULE_VERSION%" -Danypoint.username="%DEPLOY_CREDS_USR%" -Danypoint.password="%DEPLOY_CREDS_PSW%" -Dcloudhub.app="%APP_NAME%" -Dcloudhub.environment="%ENVIRONMENT%" -Dcloudhub.bg="%BG%" -Dcloudhub.worker="%WORKER%"'
       }
-    }
- 	
-    stage('Deploy CloudHub') { 
-    	      environment {
-        ANYPOINT_CREDENTIALS = credentials('cloudhub')
-      }
-       steps {
-        echo 'Deploying only because of code commit...'
-        echo " deploying to  ${params.env} environent"
-         echo " worker is  ${params.workerType}"
-        bat 'mvn package deploy -DmuleDeploy -Dusername=${ANYPOINT_CREDENTIALS_USR} -Dpassword=${ANYPOINT_CREDENTIALS_PSW} -Denvironment=SANDBOX -DworkerType=Micro -Dworkers=1 -Dregion=us-west-2'
-      }
-    }
+    }    
+  }
+  tools {
+    maven 'Maven-3.6.3'
   }
 }
